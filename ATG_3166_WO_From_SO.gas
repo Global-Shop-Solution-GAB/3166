@@ -1,0 +1,165 @@
+Program.Sub.ScreenSU.Start
+Program.Sub.ScreenSU.End
+
+Program.Sub.Preflight.Start
+
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+'Coded by: ENM
+'Project Start Date: 11/8/2010
+'Hooks:
+'  11872
+'  12231
+'Other Components:
+'  Callwrappers
+'Notes:
+'  This is created for Galaxy Tool
+
+F.Intrinsic.Control.CallSub("Log","sText","Start Update of WO from the Sales Order Modifications","bFirst",True)
+F.ODBC.Connection!con.OpenConnection(V.Ambient.PDSN,V.Ambient.PUser,V.Ambient.PPass)
+F.Intrinsic.Control.If(V.Caller.Hook,=,11872)
+	F.Intrinsic.Control.CallSub("Log","sText","Update from SO_Header","bFirst","False")
+	F.Intrinsic.Control.CallSub(So_header)
+F.Intrinsic.Control.Else
+	F.Intrinsic.Control.CallSub("Log","sText","Update from SO_Lines","bFirst","False")
+	F.Intrinsic.Control.CallSub(So_lines)
+F.Intrinsic.Control.EndIf
+
+Program.Sub.Main.End
+
+Program.Sub.SO_Header.Start
+V.Local.dateDue.Declare(Date)
+V.Local.sDue.Declare(String)
+V.Local.sSO.Declare(String)
+V.Local.sSOL.Declare(String)
+V.Local.sSQL.Declare(String)
+V.Local.sParam.Declare(String)
+V.Local.sCWDate.Declare(String)
+V.Local.bChange.Declare(Boolean)
+V.Local.sMo.Declare(String)
+V.Local.sDay.Declare(String)
+V.Local.sYr.Declare(String)
+
+V.Local.sSO.Set(V.Passed.000003)
+F.Intrinsic.String.Format(V.Local.sSO,"0000000",V.Local.sSO)
+V.Local.sDue.Set(V.Passed.000024)
+'F.Intrinsic.Debug.Stop
+F.Intrinsic.String.Left(V.Local.sDue,2,V.Local.sMo)
+F.Intrinsic.String.Mid(V.Local.sDue,3,2,V.Local.sDay)
+F.Intrinsic.String.Right(V.Local.sDue,2,V.Local.sYr)
+F.Intrinsic.String.Concat(V.Local.sMo,"/",V.Local.sDay,"/",V.Local.sYr,V.Local.dateDue)
+F.Intrinsic.String.Concat("Select * from V_Order_Lines where ORDER_NO='",V.Local.sSO,"' order by Record_No",V.Local.sSQL)
+F.Intrinsic.Control.CallSub("Log","sText",V.Local.sSQL,"bFirst",False)
+F.ODBC.Connection!con.OpenRecordsetRO("rstOL",V.Local.sSQL)
+'F.Intrinsic.Debug.Stop
+F.Intrinsic.Control.DoUntil(V.ODBC.con!rstOL.EOF,=,True)
+	F.Intrinsic.String.Left(V.ODBC.con!rstOL.FieldVal!Record_No,3,V.Local.sSOL)
+	F.Intrinsic.String.Concat("Select Sales_Order,Sales_Order_Line,Date_Due,Amt_Sales from V_Job_Header where Sales_Order='",V.Local.sSO,"' and Sales_Order_Line='",V.Local.sSOL,"'",V.local.sSQL)
+	F.Intrinsic.Control.CallSub("Log","sText",V.Local.sSQL,"bFirst",False)
+	F.ODBC.Connection!con.OpenRecordsetRO("rstJob",V.Local.sSQL)
+	F.Intrinsic.Control.Dountil(V.ODBC.con!rstJob.EOF,=,True)
+		'F.ODBC.con!rstJob.Close
+		F.Intrinsic.Debug.Stop
+		F.Intrinsic.Debug.SetLA("Screen Due Date=",V.Local.dateDue," and Table Due Date is ",V.ODBC.con!rstJob.FieldVal!Date_Due)
+		F.Intrinsic.Control.CallSub("Log","sText",V.Ambient.LastAction,"bFirst","False")
+		F.Intrinsic.Control.If(V.Local.dateDue,<>,V.ODBC.con!rstJob.FieldVal!Date_Due)
+			V.Local.bChange.Set(True)
+			F.Intrinsic.String.Format(V.Ambient.Date,"ccyymmdd",V.Local.sCWDate)
+			F.Intrinsic.String.Concat("SP!*!",V.Local.sCWDate,"!*!",3,V.Local.sParam)
+			F.Global.General.CallWrapperSync(500000,V.Local.sParam)
+			F.Global.APS.ScheduleJob(V.ODBC.con!rstJob.FieldVal!Job,V.ODBC.con!rstJob.FieldVal!Suffix,"B",V.Local.dateDue)
+		F.Intrinsic.Control.EndIf
+		F.ODBC.con!rstJob.MoveNext
+	F.Intrinsic.Control.Loop
+	F.ODBC.con!rstJob.Close
+	F.ODBC.con!rstOL.movenext
+F.Intrinsic.Control.Loop
+F.ODBC.con!rstOL.Close
+
+
+Program.Sub.SO_Header.End
+
+Program.Sub.SO_Lines.Start
+V.Local.sDue.Declare(String)
+V.Local.sSO.Declare(String)
+V.Local.sSQL.Declare(String)
+V.Local.sSOL.Declare(String)
+V.Local.sCWDate.Declare(String)
+V.Local.sParam.Declare(String)
+V.Local.sMsg.Declare(String)
+V.Local.bChange.Declare(Boolean)
+V.Local.fPrice.Declare(Float)
+V.Local.sMo.Declare(String)
+V.Local.sDay.Declare(String)
+V.Local.sYr.Declare(String)
+V.Local.dateDue.Declare(Date)
+
+
+V.Local.sSO.Set(V.Passed.000060)
+V.Local.sSOL.Set(V.Passed.000051)
+F.Intrinsic.String.Format(V.Local.sSOL,"0000",V.Local.sSOL)
+V.Local.sDue.Set(V.Passed.000011)
+V.Local.fPrice.Set(V.Passed.000009)
+F.Intrinsic.String.Left(V.Local.sDue,2,V.Local.sMo)
+F.Intrinsic.String.Mid(V.Local.sDue,3,2,V.Local.sDay)
+F.Intrinsic.String.Right(V.Local.sDue,2,V.Local.sYr)
+F.Intrinsic.String.Concat(V.Local.sMo,"/",V.Local.sDay,"/",V.Local.sYr,V.Local.dateDue)
+
+F.Intrinsic.String.Concat("Select * from V_Order_Lines where Order_No='",V.Local.sSO,"' and Record_No='",V.Local.ssol,"' order by Record_No",V.Local.sSQL)
+F.Intrinsic.UI.Msgbox(V.Local.sSQL)
+F.ODBC.Connection!con.OpenRecordsetRO("rstOL",V.Local.sSQL)
+F.Intrinsic.Control.If(V.ODBC.con!rstOL.EOF,=,False)
+	F.Intrinsic.String.Left(V.ODBC.con!rstOL.FieldVal!Record_No,3,V.Local.sSOL)
+	F.Intrinsic.String.Concat("Select Sales_Order,Sales_Order_Line,Date_Due,Amt_Sales from V_Job_Header where Sales_Order='",V.Local.sSO,"' and Sales_Order_Lines='",V.Local.sSOL,"'",V.Local.sSQL)
+	F.Intrinsic.Control.CallSub("Log","sText",V.Local.sSQL,"bFirst",False)
+	F.ODBC.Connection!con.OpenRecordsetRO("rstJob",V.Local.sSQL)
+	F.Intrinsic.Control.DoUntil(V.ODBC.con!rstJob.EOF,=,True)
+		F.Intrinsic.Debug.Stop
+		F.Intrinsic.Debug.SetLA("Screen Due Date=",V.Local.dateDue," and Table Due Date is ",V.ODBC.con!rstJob.FieldVal!Date_Due)
+		F.Intrinsic.Control.CallSub("Log","sText",V.Ambient.LastAction,"bFirst","False")
+		F.Intrinsic.Control.If(V.Local.dateDue,<>,V.ODBC.con!rstJob.FieldVal!Date_Due)
+			F.Intrinsic.Control.AndIf(V.Local.fPrice,<>,V.ODBC.con!rstJob.FieldValFloat!Amt_Sales)
+			V.Local.bChange.Set(True)
+			F.Intrinsic.String.Format(V.Ambient.Date,"ccyymmdd",V.Local.sCWDate)
+			F.Intrinsic.String.Concat("SP!*!",V.Local.sCWDate,"!*!",3,V.Local.sParam)
+			F.Intrinsic.Control.CallSub("Log","sText","Calling the callwrapper to download the schedule","bFirst",False)
+			F.Global.General.CallWrapperSync(500000,V.Local.sParam)
+			F.Intrinsic.Debug.SetLA("Backward Schedule Job ",V.ODBC.con!rstJob.FieldVal!Job)
+			F.Intrinsic.Control.CallSub("Log","sText",V.Ambient.LastAction,"bFirst",False)
+			F.Global.APS.ScheduleJob(V.ODBC.con!rstJob.FieldVal!Job,V.ODBC.con!rstJob.FieldVal!Suffix,"B",V.Local.dateDue)
+		F.Intrinsic.Control.EndIf
+		F.ODBC.con!rstJob.MoveNext
+	F.Intrinsic.Control.Loop
+	F.ODBC.con!rstJob.close
+F.Intrinsic.Control.EndIf
+F.ODBC.con!rstOL.Close
+	
+
+
+Program.Sub.SO_Lines.End
+
+Program.Sub.Log.Start
+V.Local.iHdl.Declare(Long)
+V.Local.sFile.Declare(String)
+V.Local.sLine.Declare(String)
+
+
+F.Intrinsic.File.GetHandle(V.Local.iHdl)
+F.Intrinsic.String.Concat(V.Caller.FilesDir,"\SO_To_WO.log",V.Local.sFile)
+'F.Intrinsic.UI.Msgbox(V.Local.sFile)
+F.Intrinsic.Control.If(V.Args.bFirst,=,"True")
+	F.Intrinsic.File.OpenForWrite(V.Local.sFile,V.Local.iHdl)
+F.Intrinsic.Control.Else
+	F.Intrinsic.File.OpenForAppend(V.Local.sFile,V.Local.iHdl)
+F.Intrinsic.Control.EndIf
+
+F.Intrinsic.String.Concat(V.Ambient.NewLine,V.Ambient.Now,V.Ambient.Tab,V.Args.sText,V.local.sLine)
+
+F.Intrinsic.File.WriteLine(V.Local.iHdl,V.local.sLine)
+
+F.Intrinsic.File.CloseFile(V.Local.iHdl)
+
+Program.Sub.Log.End
+
+
